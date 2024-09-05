@@ -76,7 +76,6 @@ func (m *RadiusMatcherList) GetRadiusMatcherFor(remoteAddr net.Addr) *RadiusMatc
 		}
 	}
 
-	m.cache[rAddr] = nil
 	return nil
 }
 
