@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"sync"
 
 	"layeh.com/radius"
 	"layeh.com/radius/rfc2759"
@@ -25,8 +26,9 @@ type RadiusMatcher struct {
 }
 
 type RadiusMatcherList struct {
-	matchers []*RadiusMatcher
-	cache    map[string]*RadiusMatcher
+	matchers  []*RadiusMatcher
+	cache     map[string]*RadiusMatcher
+	cacheLock sync.RWMutex
 }
 
 // TODO: All of this should be configurable
@@ -63,7 +65,10 @@ var radiusMatchers = RadiusMatcherList{
 func (m *RadiusMatcherList) GetRadiusMatcherFor(remoteAddr net.Addr) *RadiusMatcher {
 	remoteIP := remoteAddr.(*net.UDPAddr).IP
 	cacheKey := remoteIP.String()
+
+	m.cacheLock.RLock()
 	foundMatcher, ok := m.cache[cacheKey]
+	m.cacheLock.RUnlock()
 	if ok {
 		return foundMatcher
 	}
@@ -71,7 +76,9 @@ func (m *RadiusMatcherList) GetRadiusMatcherFor(remoteAddr net.Addr) *RadiusMatc
 	for _, matcher := range m.matchers {
 		for _, subnet := range matcher.Subnets {
 			if subnet.Contains(remoteIP) {
+				m.cacheLock.Lock()
 				m.cache[cacheKey] = matcher
+				m.cacheLock.Unlock()
 				return matcher
 			}
 		}
