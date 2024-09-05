@@ -66,7 +66,7 @@ var radiusMatchers = RadiusMatcherList{
 				},
 			},
 			Secret:       os.Getenv("RADIUS_SECRET_APCUPS"),
-			CustomMapper: nil,
+			CustomMapper: APCMapper,
 		},
 	},
 	cache: make(map[string]*RadiusMatcher),
