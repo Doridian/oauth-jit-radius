@@ -34,7 +34,10 @@ type OAuthUserInfo struct {
 
 func randomToken() string {
 	buff := make([]byte, 12) // 16 after b64
-	rand.Read(buff)
+	_, err := rand.Read(buff)
+	if err != nil {
+		log.Fatalf("Failed to generate random token: %v", err)
+	}
 	return base64.RawURLEncoding.EncodeToString(buff)
 }
 
@@ -109,7 +112,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	defer oauthAuthMutex.Unlock()
 
 	oauthAuthorizations[userInfo.Username] = *userInfo
-	wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
+	_, _ = wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {

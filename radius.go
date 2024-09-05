@@ -95,12 +95,12 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 	userInfo, err := GetUserInfoForUser(username)
 	if err != nil {
 		log.Printf("Cannot get user info for %s: %v", username, err)
-		w.Write(r.Response(radius.CodeAccessReject))
+		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
 
 	if userInfo.Username != username || userInfo.token == "" {
-		w.Write(r.Response(radius.CodeAccessReject))
+		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
 
@@ -112,12 +112,12 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 			err = matcher.CustomMapper(responsePacket, userInfo)
 			if err != nil {
 				log.Printf("CustomMapper failed for %s: %v", username, err)
-				w.Write(r.Response(radius.CodeAccessReject))
+				_ = w.Write(r.Response(radius.CodeAccessReject))
 				return
 			}
 		}
 
-		w.Write(responsePacket)
+		_ = w.Write(responsePacket)
 		return
 	}
 
@@ -132,12 +132,12 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		ntResponse, err := rfc2759.GenerateNTResponse(challenge, peerChallenge, []byte(username), []byte(userInfo.token))
 		if err != nil {
 			log.Printf("Cannot generate ntResponse for %s: %v", username, err)
-			w.Write(r.Response(radius.CodeAccessReject))
+			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
 		if !reflect.DeepEqual(ntResponse, peerResponse) {
-			w.Write(r.Response(radius.CodeAccessReject))
+			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
@@ -146,21 +146,21 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		recvKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.token), false)
 		if err != nil {
 			log.Printf("Cannot make recvKey for %s: %v", username, err)
-			w.Write(r.Response(radius.CodeAccessReject))
+			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
 		sendKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.token), true)
 		if err != nil {
 			log.Printf("Cannot make sendKey for %s: %v", username, err)
-			w.Write(r.Response(radius.CodeAccessReject))
+			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
 		authenticatorResponse, err := rfc2759.GenerateAuthenticatorResponse(challenge, peerChallenge, ntResponse, []byte(username), []byte(userInfo.token))
 		if err != nil {
 			log.Printf("Cannot generate authenticator response for %s: %v", username, err)
-			w.Write(r.Response(radius.CodeAccessReject))
+			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
@@ -168,30 +168,30 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		success[0] = ident
 		copy(success[1:], authenticatorResponse)
 
-		rfc2869.AcctInterimInterval_Add(responsePacket, rfc2869.AcctInterimInterval(3600))
-		rfc2868.TunnelType_Add(responsePacket, 0, rfc2868.TunnelType_Value_L2TP)
-		rfc2868.TunnelMediumType_Add(responsePacket, 0, rfc2868.TunnelMediumType_Value_IPv4)
-		microsoft.MSCHAP2Success_Add(responsePacket, []byte(success))
-		microsoft.MSMPPERecvKey_Add(responsePacket, recvKey)
-		microsoft.MSMPPESendKey_Add(responsePacket, sendKey)
-		microsoft.MSMPPEEncryptionPolicy_Add(responsePacket, microsoft.MSMPPEEncryptionPolicy_Value_EncryptionAllowed)
-		microsoft.MSMPPEEncryptionTypes_Add(responsePacket, microsoft.MSMPPEEncryptionTypes_Value_RC440or128BitAllowed)
+		_ = rfc2869.AcctInterimInterval_Add(responsePacket, rfc2869.AcctInterimInterval(3600))
+		_ = rfc2868.TunnelType_Add(responsePacket, 0, rfc2868.TunnelType_Value_L2TP)
+		_ = rfc2868.TunnelMediumType_Add(responsePacket, 0, rfc2868.TunnelMediumType_Value_IPv4)
+		_ = microsoft.MSCHAP2Success_Add(responsePacket, []byte(success))
+		_ = microsoft.MSMPPERecvKey_Add(responsePacket, recvKey)
+		_ = microsoft.MSMPPESendKey_Add(responsePacket, sendKey)
+		_ = microsoft.MSMPPEEncryptionPolicy_Add(responsePacket, microsoft.MSMPPEEncryptionPolicy_Value_EncryptionAllowed)
+		_ = microsoft.MSMPPEEncryptionTypes_Add(responsePacket, microsoft.MSMPPEEncryptionTypes_Value_RC440or128BitAllowed)
 
 		matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
 		if matcher != nil && matcher.CustomMapper != nil {
 			err = matcher.CustomMapper(responsePacket, userInfo)
 			if err != nil {
 				log.Printf("CustomMapper failed for %s: %v", username, err)
-				w.Write(r.Response(radius.CodeAccessReject))
+				_ = w.Write(r.Response(radius.CodeAccessReject))
 				return
 			}
 		}
 
-		w.Write(responsePacket)
+		_ = w.Write(responsePacket)
 		return
 	}
 
-	w.Write(r.Response(radius.CodeAccessReject))
+	_ = w.Write(r.Response(radius.CodeAccessReject))
 }
 
 func startRadiusServer() {
