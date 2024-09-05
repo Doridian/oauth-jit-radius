@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -94,18 +93,12 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respBody, err := io.ReadAll(userinfoResp.Body)
-	if err != nil {
-		http.Error(wr, "Failed to read userinfo", http.StatusInternalServerError)
-		log.Printf("Failed to read userinfo: %v", err)
-		return
-	}
-
 	userInfo := &OAuthUserInfo{
 		token:  randomToken(),
 		expiry: time.Now().Add(radiusTokenExpiry),
 	}
-	err = json.Unmarshal(respBody, userInfo)
+	jsonDecoder := json.NewDecoder(userinfoResp.Body)
+	err = jsonDecoder.Decode(userInfo)
 	if err != nil {
 		http.Error(wr, "Failed to unmarshal userinfo", http.StatusInternalServerError)
 		log.Printf("Failed to unmarshal userinfo: %v", err)
