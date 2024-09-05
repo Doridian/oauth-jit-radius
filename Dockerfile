@@ -1,21 +1,28 @@
-FROM golang:1.23 AS builder
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.23-alpine as builder
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN apk add --no-cache ca-certificates
+
+ARG GIT_REVISION=dev
+
+ENV CGO_ENABLED=0
+ENV GOOS=${TARGETOS}
+ENV GOARCH=${TARGETARCH}
 
 WORKDIR /src
-COPY . .
-ENV CGO_ENABLED=0
-RUN go build -o /oauth-jit-radius -trimpath -ldflags '-s -w' .
+COPY go.mod go.sum /src/
+RUN go mod download
 
-FROM alpine AS compressor
-RUN apk add --no-cache upx
+COPY . /src
+RUN go build -ldflags="-s -w" -trimpath -o /oauth-jit-radius .
+
+FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS default
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /oauth-jit-radius /oauth-jit-radius
-RUN upx -9 /oauth-jit-radius -o /oauth-jit-radius-compressed
 
-FROM scratch AS default
-
-COPY --from=builder /oauth-jit-radius /oauth-jit-radius
-ENTRYPOINT [ "/oauth-jit-radius" ]
-
-FROM scratch AS compressed
-
-COPY --from=compressor /oauth-jit-radius-compressed /oauth-jit-radius
 ENTRYPOINT [ "/oauth-jit-radius" ]
