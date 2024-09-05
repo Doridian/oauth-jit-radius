@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"strings"
 
 	vendor_radius "github.com/Doridian/oauth-jit-radius/radius"
@@ -27,5 +28,7 @@ func APCMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
 		return false, nil
 	}
 
-	return true, vendor_radius.APCServiceType_Add(packet, apcServiceType)
+	log.Printf("Setting APCServiceType to %v", apcServiceType)
+
+	return true, vendor_radius.APCServiceType_Set(packet, apcServiceType)
 }
