@@ -22,6 +22,9 @@ var radiusTokenExpiry time.Duration
 var oauthAuthMutex sync.RWMutex
 var oauthAuthorizations map[string]OAuthUserInfo
 
+var oauthTLSCertFilename string
+var oauthTLSLoadTime time.Time
+
 type OAuthUserInfo struct {
 	Sub                   string `json:"sub"`
 	Name                  string `json:"name"`
@@ -64,7 +67,7 @@ func startOAuthServer() {
 		RedirectURL: os.Getenv("OAUTH_REDIRECT_URL"),
 	}
 
-	go loopCleanupUserInfo()
+	go loopOauthMaintenance()
 
 	http.HandleFunc("/", handleLogin)
 	http.HandleFunc("/login", handleLogin)
@@ -72,7 +75,16 @@ func startOAuthServer() {
 	log.Printf("Starting OAuth server on %s", os.Getenv("OAUTH_SERVER_ADDR"))
 	log.Printf("Visit: %s", os.Getenv("OAUTH_LOGIN_URL"))
 
-	if err := http.ListenAndServe(os.Getenv("OAUTH_SERVER_ADDR"), nil); err != nil {
+	oauthTLSCertFilename = os.Getenv("TLS_CERT")
+	tlsKey := os.Getenv("TLS_KEY")
+	if oauthTLSCertFilename != "" && tlsKey != "" {
+		oauthTLSLoadTime = time.Now()
+		err = http.ListenAndServeTLS(os.Getenv("OAUTH_SERVER_ADDR"), oauthTLSCertFilename, tlsKey, nil)
+	} else {
+		oauthTLSCertFilename = ""
+		err = http.ListenAndServe(os.Getenv("OAUTH_SERVER_ADDR"), nil)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
 }
@@ -145,9 +157,26 @@ func cleanupUserInfo() {
 	}
 }
 
-func loopCleanupUserInfo() {
+func shutdownIfNewTLSCert() {
+	if oauthTLSCertFilename == "" {
+		return
+	}
+
+	stat, err := os.Stat(oauthTLSCertFilename)
+	if err != nil {
+		log.Fatalf("Failed to stat TLS cert: %v", err)
+	}
+
+	if stat.ModTime().After(oauthTLSLoadTime) {
+		log.Printf("New TLS cert detected, restarting")
+		os.Exit(0)
+	}
+}
+
+func loopOauthMaintenance() {
 	for {
 		time.Sleep(1 * time.Minute)
+		shutdownIfNewTLSCert()
 		cleanupUserInfo()
 	}
 }
