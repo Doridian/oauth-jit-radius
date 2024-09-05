@@ -58,6 +58,16 @@ var radiusMatchers = RadiusMatcherList{
 			Secret:       os.Getenv("RADIUS_SECRET_SUPERMICRO"),
 			CustomMapper: SupermicroMapper,
 		},
+		{
+			Subnets: []net.IPNet{
+				{
+					IP:   net.IP{10, 1, 11, 2},
+					Mask: net.IPMask{255, 255, 255, 255},
+				},
+			},
+			Secret:       os.Getenv("RADIUS_SECRET_APCUPS"),
+			CustomMapper: nil,
+		},
 	},
 	cache: make(map[string]*RadiusMatcher),
 }
