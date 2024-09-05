@@ -195,11 +195,6 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 }
 
 func startRadiusServer() {
-	radiusSecret := os.Getenv("RADIUS_SECRET")
-	if radiusSecret == "" {
-		log.Fatal("RADIUS_SECRET environment variable is required")
-	}
-
 	server := radius.PacketServer{
 		Handler:      radius.HandlerFunc(radiusHandler),
 		SecretSource: &radiusMatchers,

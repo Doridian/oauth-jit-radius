@@ -107,7 +107,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 
 	oauthAuthorizations[userInfo.Username] = *userInfo
 
-	wr.Write([]byte(fmt.Sprintf("Your RADIUS token is: %s\nIt will expire: %v\n", userInfo.token, userInfo.expiry)))
+	wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
