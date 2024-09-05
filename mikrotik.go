@@ -5,6 +5,10 @@ import (
 	"layeh.com/radius"
 )
 
-func MikrotikMapper(packet *radius.Packet, info OAuthUserInfo) error {
-	return vendor_radius.MikrotikGroup_AddString(packet, info.MikrotikGroup)
+func MikrotikMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+	if info.MikrotikGroup == "" {
+		return false, nil
+	}
+
+	return true, vendor_radius.MikrotikGroup_AddString(packet, info.MikrotikGroup)
 }

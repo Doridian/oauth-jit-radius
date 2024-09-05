@@ -22,7 +22,7 @@ import (
 type RadiusMatcher struct {
 	Subnets      []net.IPNet
 	Secret       string
-	CustomMapper func(*radius.Packet, OAuthUserInfo) error
+	CustomMapper func(*radius.Packet, OAuthUserInfo) (bool, error)
 }
 
 type RadiusMatcherList struct {
@@ -95,6 +95,28 @@ func (m *RadiusMatcherList) RADIUSSecret(ctx context.Context, remoteAddr net.Add
 	return nil, nil
 }
 
+func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInfo OAuthUserInfo, packet *radius.Packet) {
+	matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
+	if matcher == nil || matcher.CustomMapper == nil {
+		_ = w.Write(packet)
+		return
+	}
+
+	ok, err := matcher.CustomMapper(packet, userInfo)
+	if err != nil {
+		log.Printf("CustomMapper failed for %s: %v", userInfo.Username, err)
+		_ = w.Write(r.Response(radius.CodeAccessReject))
+		return
+	}
+
+	if !ok {
+		_ = w.Write(r.Response(radius.CodeAccessReject))
+		return
+	}
+
+	_ = w.Write(packet)
+}
+
 func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 	username := rfc2865.UserName_GetString(r.Packet)
 	password := rfc2865.UserPassword_GetString(r.Packet)
@@ -113,18 +135,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 
 	if password == userInfo.token {
 		responsePacket := r.Response(radius.CodeAccessAccept)
-
-		matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
-		if matcher != nil && matcher.CustomMapper != nil {
-			err = matcher.CustomMapper(responsePacket, userInfo)
-			if err != nil {
-				log.Printf("CustomMapper failed for %s: %v", username, err)
-				_ = w.Write(r.Response(radius.CodeAccessReject))
-				return
-			}
-		}
-
-		_ = w.Write(responsePacket)
+		radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return
 	}
 
@@ -184,17 +195,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		_ = microsoft.MSMPPEEncryptionPolicy_Add(responsePacket, microsoft.MSMPPEEncryptionPolicy_Value_EncryptionAllowed)
 		_ = microsoft.MSMPPEEncryptionTypes_Add(responsePacket, microsoft.MSMPPEEncryptionTypes_Value_RC440or128BitAllowed)
 
-		matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
-		if matcher != nil && matcher.CustomMapper != nil {
-			err = matcher.CustomMapper(responsePacket, userInfo)
-			if err != nil {
-				log.Printf("CustomMapper failed for %s: %v", username, err)
-				_ = w.Write(r.Response(radius.CodeAccessReject))
-				return
-			}
-		}
-
-		_ = w.Write(responsePacket)
+		radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return
 	}
 

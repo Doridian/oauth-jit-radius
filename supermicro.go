@@ -5,7 +5,11 @@ import (
 	"layeh.com/radius/rfc2865"
 )
 
-func SupermicroMapper(packet *radius.Packet, info OAuthUserInfo) error {
+func SupermicroMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+	if info.SupermicroPermissions == "" {
+		return false, nil
+	}
+
 	packet.Add(rfc2865.VendorSpecific_Type, radius.Attribute(info.SupermicroPermissions))
-	return nil
+	return true, nil
 }
