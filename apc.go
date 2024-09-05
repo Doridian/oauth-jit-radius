@@ -14,11 +14,11 @@ func APCMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
 
 	var apcServiceType vendor_radius.APCServiceType
 	switch strings.ToLower(info.APCServiceType) {
-	case "admin", "2":
+	case "admin", "1":
 		apcServiceType = vendor_radius.APCServiceType_Value_Admin
-	case "device", "1":
+	case "device", "2":
 		apcServiceType = vendor_radius.APCServiceType_Value_Device
-	case "readonly", "0":
+	case "readonly", "3":
 		apcServiceType = vendor_radius.APCServiceType_Value_ReadOnly
 	default:
 		return false, nil
