@@ -5,7 +5,17 @@ COPY . .
 ENV CGO_ENABLED=0
 RUN go build -o /out/foxRADIUS -trimpath -ldflags '-s -w' .
 
-FROM scratch
+FROM alpine AS compressor
+RUN apk add --no-cache upx
+COPY --from=builder /foxRADIUS /foxRADIUS
+RUN upx -9 /foxRADIUS -o /foxRADIUS-compressed
+
+FROM scratch AS default
 
 COPY --from=builder /out/foxRADIUS /foxRADIUS
+ENTRYPOINT [ "/foxRADIUS" ]
+
+FROM scratch AS compressed
+
+COPY --from=compressor /foxRADIUS-compressed /foxRADIUS
 ENTRYPOINT [ "/foxRADIUS" ]
