@@ -20,7 +20,7 @@ RUN go mod download
 COPY . /src
 RUN go build -ldflags="-s -w" -trimpath -o /oauth-jit-radius .
 
-FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch AS default
+FROM scratch AS default
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /oauth-jit-radius /oauth-jit-radius
