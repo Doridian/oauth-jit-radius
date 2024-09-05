@@ -105,8 +105,10 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauthAuthorizations[userInfo.Username] = *userInfo
+	oauthAuthMutex.Lock()
+	defer oauthAuthMutex.Unlock()
 
+	oauthAuthorizations[userInfo.Username] = *userInfo
 	wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
 }
 
