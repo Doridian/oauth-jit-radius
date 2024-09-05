@@ -1,4 +1,4 @@
-module github.com/Doridian/foxRADIUS
+module github.com/Doridian/oauth-jit-radius
 
 go 1.23.0
 

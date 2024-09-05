@@ -35,7 +35,7 @@ jobs:
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
-            ghcr.io/doridian/foxradius/foxradius:latest
+            ghcr.io/doridian/oauth-jit-radius/oauth-jit-radius:latest
 
       - name: Build COMPRESSED container image
         uses: docker/build-push-action@v6
@@ -46,4 +46,4 @@ jobs:
           build-args: |
             GIT_REVISION=${{ github.sha }}
           tags: |
-            ghcr.io/doridian/foxradius/foxradius:compressed
+            ghcr.io/doridian/oauth-jit-radius/oauth-jit-radius:compressed

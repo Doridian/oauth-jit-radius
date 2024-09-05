@@ -1,7 +1,7 @@
 package main
 
 import (
-	vendor_radius "github.com/Doridian/foxRADIUS/radius"
+	vendor_radius "github.com/Doridian/oauth-jit-radius/radius"
 	"layeh.com/radius"
 )
 
