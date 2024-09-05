@@ -61,16 +61,17 @@ var radiusMatchers = RadiusMatcherList{
 }
 
 func (m *RadiusMatcherList) GetRadiusMatcherFor(remoteAddr net.Addr) *RadiusMatcher {
-	rAddr := remoteAddr.String()
-	foundMatcher, ok := m.cache[rAddr]
+	remoteIP := remoteAddr.(*net.UDPAddr).IP
+	cacheKey := remoteIP.String()
+	foundMatcher, ok := m.cache[cacheKey]
 	if ok {
 		return foundMatcher
 	}
 
 	for _, matcher := range m.matchers {
 		for _, subnet := range matcher.Subnets {
-			if subnet.Contains(remoteAddr.(*net.UDPAddr).IP) {
-				m.cache[rAddr] = matcher
+			if subnet.Contains(remoteIP) {
+				m.cache[cacheKey] = matcher
 				return matcher
 			}
 		}
