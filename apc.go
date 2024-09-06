@@ -1,19 +1,26 @@
 package main
 
 import (
+	"strings"
+
 	vendor_radius "github.com/Doridian/oauth-jit-radius/radius"
 	"layeh.com/radius"
 )
 
 func APCMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+	if info.APCServiceType == "" {
+		return false, nil
+	}
+
 	var apcServiceType vendor_radius.APCServiceType
-	if info.HasClaim("apc_admin") {
+	switch strings.ToLower(info.APCServiceType) {
+	case "admin":
 		apcServiceType = vendor_radius.APCServiceType_Value_Admin
-	} else if info.HasClaim("apc_device") {
+	case "device":
 		apcServiceType = vendor_radius.APCServiceType_Value_Device
-	} else if info.HasClaim("apc_readonly") {
+	case "readonly":
 		apcServiceType = vendor_radius.APCServiceType_Value_ReadOnly
-	} else {
+	default:
 		return false, nil
 	}
 

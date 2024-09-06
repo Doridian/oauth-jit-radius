@@ -34,17 +34,14 @@ type oauthVerifier struct {
 }
 
 type OAuthUserInfo struct {
-	Sub      string   `json:"sub"`
-	Name     string   `json:"name"`
-	Username string   `json:"preferred_username"`
-	Claims   []string `json:"claims"`
-	claimSet map[string]bool
-	token    string
-	expiry   time.Time
-}
-
-func (o *OAuthUserInfo) HasClaim(claim string) bool {
-	return o.claimSet[claim]
+	Sub                   string `json:"sub"`
+	Name                  string `json:"name"`
+	Username              string `json:"preferred_username"`
+	MikrotikGroup         string `json:"mikrotik_group"`
+	APCServiceType        string `json:"apc_service_type"`
+	SupermicroPermissions string `json:"supermicro_permissions"`
+	token                 string
+	expiry                time.Time
 }
 
 func randomToken() string {
@@ -142,10 +139,6 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 		http.Error(wr, "Failed to unmarshal userinfo", http.StatusInternalServerError)
 		log.Printf("Failed to unmarshal userinfo: %v", err)
 		return
-	}
-
-	for _, claim := range userInfo.Claims {
-		userInfo.claimSet[claim] = true
 	}
 
 	userSplit := strings.SplitN(userInfo.Username, "@", 2)
