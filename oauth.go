@@ -34,14 +34,23 @@ type oauthVerifier struct {
 }
 
 type OAuthUserInfo struct {
-	Sub                   string `json:"sub"`
-	Name                  string `json:"name"`
-	Username              string `json:"preferred_username"`
-	MikrotikGroup         string `json:"mikrotik_group"`
-	APCServiceType        string `json:"apc_service_type"`
-	SupermicroPermissions string `json:"supermicro_permissions"`
+	Sub                   string   `json:"sub"`
+	Name                  string   `json:"name"`
+	Username              string   `json:"preferred_username"`
+	MikrotikGroup         []string `json:"mikrotik_group"`
+	APCServiceType        []string `json:"apc_service_type"`
+	SupermicroPermissions []string `json:"supermicro_permissions"`
 	token                 string
 	expiry                time.Time
+}
+
+func HasClaim(claims []string, claim string) bool {
+	for _, c := range claims {
+		if c == claim {
+			return true
+		}
+	}
+	return false
 }
 
 func randomToken() string {
