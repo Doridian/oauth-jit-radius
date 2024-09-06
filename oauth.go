@@ -150,11 +150,6 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userSplit := strings.SplitN(userInfo.Username, "@", 2)
-	if len(userSplit) > 1 {
-		userInfo.Username = userSplit[0]
-	}
-
 	oauthAuthMutex.Lock()
 	defer oauthAuthMutex.Unlock()
 
