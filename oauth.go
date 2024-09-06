@@ -22,8 +22,16 @@ var radiusTokenExpiry time.Duration
 var oauthAuthMutex sync.RWMutex
 var oauthAuthorizations map[string]OAuthUserInfo
 
+var oauthVerifierLock sync.Mutex
+var oauthVerifierMap map[string]oauthVerifier
+
 var oauthTLSCertFilename string
 var oauthTLSLoadTime time.Time
+
+type oauthVerifier struct {
+	Verifier string
+	expiry   time.Time
+}
 
 type OAuthUserInfo struct {
 	Sub                   string `json:"sub"`
@@ -54,6 +62,7 @@ func startOAuthServer() {
 	}
 
 	oauthAuthorizations = make(map[string]OAuthUserInfo)
+	oauthVerifierMap = make(map[string]oauthVerifier)
 
 	oauthUserinfoUrl = os.Getenv("OAUTH_USERINFO_URL")
 
@@ -94,8 +103,19 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	wr.Header().Add("Content-Type", "text/plain")
 
 	code := r.URL.Query().Get("code")
+	state := r.URL.Query().Get("state")
 
-	tok, err := oauthConfig.Exchange(r.Context(), code)
+	oauthVerifierLock.Lock()
+	verifierEntry := oauthVerifierMap[state]
+	delete(oauthVerifierMap, state)
+	oauthVerifierLock.Unlock()
+
+	if verifierEntry.Verifier == "" || verifierEntry.expiry.Before(time.Now()) {
+		http.Error(wr, "Invalid state", http.StatusBadRequest)
+		return
+	}
+
+	tok, err := oauthConfig.Exchange(r.Context(), code, oauth2.VerifierOption(verifierEntry.Verifier))
 	if err != nil {
 		http.Error(wr, "Failed to exchange token: "+err.Error(), http.StatusBadRequest)
 		return
@@ -129,9 +149,19 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
+	state := randomToken()
+
+	verifier := oauth2.GenerateVerifier()
+	oauthVerifierLock.Lock()
+	oauthVerifierMap[state] = oauthVerifier{
+		Verifier: verifier,
+		expiry:   time.Now().Add(5 * time.Minute),
+	}
+	oauthVerifierLock.Unlock()
+
 	// Redirect user to consent page to ask for permission
 	// for the scopes specified above.
-	url := oauthConfig.AuthCodeURL("state", oauth2.AccessTypeOnline)
+	url := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.S256ChallengeOption(verifier))
 	http.Redirect(wr, r, url, http.StatusFound)
 }
 
@@ -158,6 +188,17 @@ func cleanupUserInfo() {
 	}
 }
 
+func cleanupVerifiers() {
+	oauthVerifierLock.Lock()
+	defer oauthVerifierLock.Unlock()
+
+	for verifier, v := range oauthVerifierMap {
+		if v.expiry.Before(time.Now()) {
+			delete(oauthVerifierMap, verifier)
+		}
+	}
+}
+
 func shutdownIfNewTLSCert() {
 	if oauthTLSCertFilename == "" {
 		return
@@ -179,5 +220,6 @@ func loopOauthMaintenance() {
 		time.Sleep(1 * time.Minute)
 		shutdownIfNewTLSCert()
 		cleanupUserInfo()
+		cleanupVerifiers()
 	}
 }
