@@ -39,6 +39,7 @@ type OAuthUserInfo struct {
 	Username              string   `json:"preferred_username"`
 	MikrotikGroup         []string `json:"mikrotik_group"`
 	APCServiceType        []string `json:"apc_service_type"`
+	CyberPowerServiceType []string `json:"cyberpower_service_type"`
 	SupermicroPermissions []string `json:"supermicro_permissions"`
 	token                 string
 	expiry                time.Time

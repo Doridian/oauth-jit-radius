@@ -1,0 +1,8 @@
+VENDOR CyberPower 3808
+BEGIN-VENDOR CyberPower
+ATTRIBUTE CyberPower-Service-Type 1 integer
+ATTRIBUTE CyberPower-Outlets 2 string
+VALUE CyberPower-Service-Type Admin 1
+VALUE CyberPower-Service-Type Viewer 2
+VALUE CyberPower-Service-Type Outlet 3
+END-VENDOR CyberPower
