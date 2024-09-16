@@ -75,7 +75,7 @@ var radiusMatchers = RadiusMatcherList{
 					Mask: net.IPMask{255, 255, 255, 255},
 				},
 			},
-			Secret:       os.Getenv("RADIUS_SECRET_DORIUPS"),
+			Secret:       os.Getenv("RADIUS_SECRET_DEFAULT"),
 			CustomMapper: nil,
 		},
 	},
