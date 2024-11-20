@@ -23,7 +23,7 @@ RUN go build -ldflags="-s -w" -trimpath -o /oauth-jit-radius .
 FROM scratch AS default
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder templates /templates
+COPY templates /templates
 COPY --from=builder /oauth-jit-radius /oauth-jit-radius
 
 ENTRYPOINT [ "/oauth-jit-radius" ]
