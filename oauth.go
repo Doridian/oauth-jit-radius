@@ -164,7 +164,11 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	accept := strings.TrimSpace(strings.ToLower(r.Header.Get("Accept")))
 	if accept == "application/json" {
 		wr.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(wr).Encode(userInfo)
+		err = json.NewEncoder(wr).Encode(userInfo)
+		if err != nil {
+			http.Error(wr, "Failed to marshal userinfo", http.StatusInternalServerError)
+			log.Printf("Failed to marshal userinfo: %v", err)
+		}
 		return
 	}
 
