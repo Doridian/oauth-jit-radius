@@ -121,7 +121,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	oauthVerifierLock.Unlock()
 
 	if verifierEntry.Verifier == "" || verifierEntry.expiry.Before(time.Now()) {
-		http.Error(wr, "Invalid state", http.StatusBadRequest)
+		handleLogin(wr, r)
 		return
 	}
 
