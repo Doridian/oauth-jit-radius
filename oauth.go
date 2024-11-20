@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -92,6 +91,7 @@ func startOAuthServer() {
 	http.HandleFunc("/", handleLogin)
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/redirect", handleRedirect)
+	http.HandleFunc("/rendertest", handleRenderTest)
 	log.Printf("Starting OAuth server on %s", os.Getenv("OAUTH_SERVER_ADDR"))
 	log.Printf("Visit: %s", os.Getenv("OAUTH_LOGIN_URL"))
 
@@ -110,8 +110,6 @@ func startOAuthServer() {
 }
 
 func handleRedirect(wr http.ResponseWriter, r *http.Request) {
-	wr.Header().Add("Content-Type", "text/plain")
-
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 
@@ -160,19 +158,26 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
 
 	oauthAuthorizations[userInfo.Username] = *userInfo
+	renderUserInfo(wr, r, userInfo)
+}
 
-	accept := strings.TrimSpace(strings.ToLower(r.Header.Get("Accept")))
-	if accept == "application/json" {
-		wr.Header().Add("Content-Type", "application/json")
-		err = json.NewEncoder(wr).Encode(userInfo)
-		if err != nil {
-			http.Error(wr, "Failed to marshal userinfo", http.StatusInternalServerError)
-			log.Printf("Failed to marshal userinfo: %v", err)
-		}
+func handleRenderTest(wr http.ResponseWriter, r *http.Request) {
+	dummyUserInfo := &OAuthUserInfo{
+		Username: "testuser",
+		Token:    "testtoken",
+		Expiry:   time.Now().Add(radiusTokenExpiry),
+	}
+	renderUserInfo(wr, r, dummyUserInfo)
+}
+
+func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUserInfo) {
+	if userInfo == nil || userInfo.Token == "" {
+		http.Error(wr, "Not found", http.StatusNotFound)
 		return
 	}
 
-	_, _ = wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.Token, userInfo.Expiry)))
+	wr.Header().Set("Content-Type", "text/html")
+	RenderTemplate(wr, r, "credentials.html", userInfo)
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
