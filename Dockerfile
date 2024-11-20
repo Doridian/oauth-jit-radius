@@ -24,5 +24,6 @@ FROM scratch AS default
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /oauth-jit-radius /oauth-jit-radius
+COPY --from=builder /src/templates /templates
 
 ENTRYPOINT [ "/oauth-jit-radius" ]
