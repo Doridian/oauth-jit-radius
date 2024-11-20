@@ -17,7 +17,7 @@ COPY go.mod go.sum /src/
 RUN go mod download
 
 COPY --exclude=templates . /src
-RUN go build -ldflags="-s -w" -trimpath -o /oauth-jit-radius .
+RUN go build -ldflags="-s -w" -buildvcs=false -trimpath -o /oauth-jit-radius .
 
 FROM scratch AS default
 
