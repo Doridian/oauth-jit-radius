@@ -143,12 +143,12 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 
 	userInfo := GetUserInfoForUser(username)
 
-	if userInfo.Username != username || userInfo.token == "" {
+	if userInfo.Username != username || userInfo.Token == "" {
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
 
-	if password == userInfo.token {
+	if password == userInfo.Token {
 		responsePacket := r.Response(radius.CodeAccessAccept)
 		radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return
@@ -162,7 +162,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		ident := response[0]
 		peerChallenge := response[2:18]
 		peerResponse := response[26:50]
-		ntResponse, err := rfc2759.GenerateNTResponse(challenge, peerChallenge, []byte(username), []byte(userInfo.token))
+		ntResponse, err := rfc2759.GenerateNTResponse(challenge, peerChallenge, []byte(username), []byte(userInfo.Token))
 		if err != nil {
 			log.Printf("Cannot generate ntResponse for %s: %v", username, err)
 			_ = w.Write(r.Response(radius.CodeAccessReject))
@@ -176,21 +176,21 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 
 		responsePacket := r.Response(radius.CodeAccessAccept)
 
-		recvKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.token), false)
+		recvKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.Token), false)
 		if err != nil {
 			log.Printf("Cannot make recvKey for %s: %v", username, err)
 			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
-		sendKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.token), true)
+		sendKey, err := rfc3079.MakeKey(ntResponse, []byte(userInfo.Token), true)
 		if err != nil {
 			log.Printf("Cannot make sendKey for %s: %v", username, err)
 			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
 
-		authenticatorResponse, err := rfc2759.GenerateAuthenticatorResponse(challenge, peerChallenge, ntResponse, []byte(username), []byte(userInfo.token))
+		authenticatorResponse, err := rfc2759.GenerateAuthenticatorResponse(challenge, peerChallenge, ntResponse, []byte(username), []byte(userInfo.Token))
 		if err != nil {
 			log.Printf("Cannot generate authenticator response for %s: %v", username, err)
 			_ = w.Write(r.Response(radius.CodeAccessReject))

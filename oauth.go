@@ -34,15 +34,15 @@ type oauthVerifier struct {
 }
 
 type OAuthUserInfo struct {
-	Sub                   string   `json:"sub"`
-	Name                  string   `json:"name"`
-	Username              string   `json:"preferred_username"`
-	MikrotikGroup         []string `json:"mikrotik_group"`
-	APCServiceType        []string `json:"apc_service_type"`
-	CyberPowerServiceType []string `json:"cyberpower_service_type"`
-	SupermicroPermissions []string `json:"supermicro_permissions"`
-	token                 string
-	expiry                time.Time
+	Sub                   string    `json:"sub"`
+	Name                  string    `json:"name"`
+	Username              string    `json:"preferred_username"`
+	MikrotikGroup         []string  `json:"mikrotik_group"`
+	APCServiceType        []string  `json:"apc_service_type"`
+	CyberPowerServiceType []string  `json:"cyberpower_service_type"`
+	SupermicroPermissions []string  `json:"supermicro_permissions"`
+	Token                 string    `json:"token"`
+	Expiry                time.Time `json:"expiry"`
 }
 
 func HasClaim(claims []string, claim string) bool {
@@ -139,10 +139,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userInfo := &OAuthUserInfo{
-		token:  randomToken(),
-		expiry: time.Now().Add(radiusTokenExpiry),
-	}
+	userInfo := &OAuthUserInfo{}
 	jsonDecoder := json.NewDecoder(userinfoResp.Body)
 	err = jsonDecoder.Decode(userInfo)
 	if err != nil {
@@ -155,12 +152,23 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	defer oauthAuthMutex.Unlock()
 
 	userInfoOld := getUserInfoForUserNoLock(userInfo.Username)
-	if userInfoOld.token != "" {
-		userInfo.token = userInfoOld.token
+	if userInfoOld.Token == "" {
+		userInfo.Token = randomToken()
+	} else {
+		userInfo.Token = userInfoOld.Token
 	}
+	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
 
 	oauthAuthorizations[userInfo.Username] = *userInfo
-	_, _ = wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
+
+	accept := strings.TrimSpace(strings.ToLower(r.Header.Get("Accept")))
+	if accept == "application/json" {
+		wr.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(wr).Encode(userInfo)
+		return
+	}
+
+	_, _ = wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.Token, userInfo.Expiry)))
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
@@ -182,7 +190,7 @@ func handleLogin(wr http.ResponseWriter, r *http.Request) {
 
 func getUserInfoForUserNoLock(username string) OAuthUserInfo {
 	authInfo, ok := oauthAuthorizations[username]
-	if !ok || authInfo.expiry.Before(time.Now()) {
+	if !ok || authInfo.Expiry.Before(time.Now()) {
 		return OAuthUserInfo{}
 	}
 
@@ -201,7 +209,7 @@ func cleanupUserInfo() {
 	defer oauthAuthMutex.Unlock()
 
 	for username, authInfo := range oauthAuthorizations {
-		if authInfo.expiry.Before(time.Now()) {
+		if authInfo.Expiry.Before(time.Now()) {
 			delete(oauthAuthorizations, username)
 		}
 	}
