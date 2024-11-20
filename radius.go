@@ -141,12 +141,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 	username := rfc2865.UserName_GetString(r.Packet)
 	password := rfc2865.UserPassword_GetString(r.Packet)
 
-	userInfo, err := GetUserInfoForUser(username)
-	if err != nil {
-		log.Printf("Cannot get user info for %s: %v", username, err)
-		_ = w.Write(r.Response(radius.CodeAccessReject))
-		return
-	}
+	userInfo := GetUserInfoForUser(username)
 
 	if userInfo.Username != username || userInfo.token == "" {
 		_ = w.Write(r.Response(radius.CodeAccessReject))

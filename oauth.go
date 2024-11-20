@@ -154,6 +154,11 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	oauthAuthMutex.Lock()
 	defer oauthAuthMutex.Unlock()
 
+	userInfoOld := getUserInfoForUserNoLock(userInfo.Username)
+	if userInfoOld.token != "" {
+		userInfo.token = userInfoOld.token
+	}
+
 	oauthAuthorizations[userInfo.Username] = *userInfo
 	_, _ = wr.Write([]byte(fmt.Sprintf("RADIUS username: %s\nRADIUS password: %s\nIt will expire: %v\n", userInfo.Username, userInfo.token, userInfo.expiry)))
 }
@@ -175,16 +180,20 @@ func handleLogin(wr http.ResponseWriter, r *http.Request) {
 	http.Redirect(wr, r, url, http.StatusFound)
 }
 
-func GetUserInfoForUser(username string) (OAuthUserInfo, error) {
+func getUserInfoForUserNoLock(username string) OAuthUserInfo {
+	authInfo, ok := oauthAuthorizations[username]
+	if !ok || authInfo.expiry.Before(time.Now()) {
+		return OAuthUserInfo{}
+	}
+
+	return authInfo
+}
+
+func GetUserInfoForUser(username string) OAuthUserInfo {
 	oauthAuthMutex.RLock()
 	defer oauthAuthMutex.RUnlock()
 
-	authInfo, ok := oauthAuthorizations[username]
-	if !ok || authInfo.expiry.Before(time.Now()) {
-		return OAuthUserInfo{}, nil
-	}
-
-	return authInfo, nil
+	return getUserInfoForUserNoLock(username)
 }
 
 func cleanupUserInfo() {
