@@ -15,6 +15,7 @@ ENV GOARCH=${TARGETARCH}
 WORKDIR /src
 COPY go.mod go.sum /src/
 RUN go mod download
+RUN go mod tidy
 
 COPY --exclude=templates . /src
 RUN go build -ldflags="-s -w" -buildvcs=false -trimpath -o /oauth-jit-radius .
