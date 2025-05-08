@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -144,6 +145,9 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	userInfo := &OAuthUserInfo{}
 	jsonDecoder := json.NewDecoder(userInfoResp.Body)
 	err = jsonDecoder.Decode(userInfo)
+	if err == nil && userInfo.Username == "" {
+		err = errors.New("missing username in userinfo")
+	}
 	if err != nil {
 		http.Error(wr, "Failed to unmarshal userinfo", http.StatusInternalServerError)
 		log.Printf("Failed to unmarshal userinfo: %v", err)
