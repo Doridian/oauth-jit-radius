@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,7 +17,7 @@ import (
 )
 
 var oauthConfig *oauth2.Config
-var oauthUserinfoUrl string
+var oauthUserInfoUrl string
 var radiusTokenExpiry time.Duration
 
 var oauthAuthMutex sync.RWMutex
@@ -73,7 +75,7 @@ func startOAuthServer() {
 	oauthAuthorizations = make(map[string]OAuthUserInfo)
 	oauthVerifierMap = make(map[string]oauthVerifier)
 
-	oauthUserinfoUrl = os.Getenv("OAUTH_USERINFO_URL")
+	oauthUserInfoUrl = os.Getenv("OAUTH_USERINFO_URL")
 
 	oauthConfig = &oauth2.Config{
 		ClientID:     os.Getenv("OAUTH_CLIENT_ID"),
@@ -130,7 +132,10 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	}
 
 	client := oauthConfig.Client(r.Context(), tok)
-	userinfoResp, err := client.Get(oauthUserinfoUrl)
+	userInfoResp, err := client.Get(oauthUserInfoUrl)
+	if err == nil && (userInfoResp.StatusCode < 200 || userInfoResp.StatusCode >= 300) {
+		err = fmt.Errorf("http error %d (%s)", userInfoResp.StatusCode, userInfoResp.Status)
+	}
 	if err != nil {
 		http.Error(wr, "Failed to get userinfo", http.StatusInternalServerError)
 		log.Printf("Failed to get userinfo: %v", err)
@@ -138,8 +143,11 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	}
 
 	userInfo := &OAuthUserInfo{}
-	jsonDecoder := json.NewDecoder(userinfoResp.Body)
+	jsonDecoder := json.NewDecoder(userInfoResp.Body)
 	err = jsonDecoder.Decode(userInfo)
+	if err == nil && userInfo.Username == "" {
+		err = errors.New("missing username in userinfo")
+	}
 	if err != nil {
 		http.Error(wr, "Failed to unmarshal userinfo", http.StatusInternalServerError)
 		log.Printf("Failed to unmarshal userinfo: %v", err)
