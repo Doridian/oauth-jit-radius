@@ -4,22 +4,27 @@ async function waitFrame() {
     });
 }
 
-async function copyInt(element, text) {
-    await navigator.clipboard.writeText(text);
-    await waitFrame();
-    element.classList.remove('copydone');
-    await waitFrame();
-    element.classList.add('copydone');
+async function copyInt(element) {
+    try {
+        const value = element.querySelector('.copyvalue').innerText;
+        if (!value) {
+            throw new Error('No value to copy');
+        }
+
+        await navigator.clipboard.writeText(value);
+        await waitFrame();
+        element.classList.remove('copydone');
+        await waitFrame();
+        element.classList.add('copydone');
+    } catch (err) {
+        console.error('Failed to copy', err);
+        alert(`Failed to copy: ${err.text || err}`);
+    }
 }
 
 function addElementInt(element) {
     element.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const value = element.querySelector('.copyvalue');
-        copyInt(element, value.innerText).catch(err => {
-            alert('Failed to copy: ', err);
-        });
+        copyInt(element);
     });
 }
 
