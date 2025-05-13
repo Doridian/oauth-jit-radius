@@ -16,14 +16,14 @@ WORKDIR /src
 COPY go.mod go.sum /src/
 RUN go mod download
 
-COPY --exclude=templates . /src
+COPY --exclude=web . /src
 RUN go mod tidy
 RUN go build -ldflags="-s -w" -buildvcs=false -trimpath -o /oauth-jit-radius .
 
 FROM scratch AS default
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY templates /templates
+COPY web /web
 COPY --from=builder /oauth-jit-radius /oauth-jit-radius
 
 ENTRYPOINT [ "/oauth-jit-radius" ]

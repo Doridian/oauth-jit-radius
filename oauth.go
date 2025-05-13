@@ -90,10 +90,13 @@ func startOAuthServer() {
 
 	go loopOauthMaintenance()
 
-	http.HandleFunc("/", handleLogin)
+	http.HandleFunc("/{$}", handleLogin)
+	http.HandleFunc("/index.htm", handleLogin)
+	http.HandleFunc("/index.html", handleLogin)
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/redirect", handleRedirect)
 	http.HandleFunc("/rendertest", handleRenderTest)
+	http.Handle("/", http.FileServer(http.Dir("web")))
 	log.Printf("Starting OAuth server on %s", os.Getenv("OAUTH_SERVER_ADDR"))
 	log.Printf("Visit: %s", os.Getenv("OAUTH_LOGIN_URL"))
 

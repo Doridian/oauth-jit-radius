@@ -9,7 +9,7 @@ import (
 var templates = buildTemplates()
 
 func buildTemplates() *template.Template {
-	tpl, err := template.ParseGlob("templates/*.html")
+	tpl, err := template.ParseGlob("web/*.html")
 	if err != nil {
 		panic(err)
 	}
