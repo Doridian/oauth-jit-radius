@@ -201,6 +201,7 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 			log.Printf("Failed to marshal userinfo: %v", err)
 		}
 	case "text/html":
+		fallthrough
 	default:
 		wr.Header().Set("Content-Type", "text/html")
 		RenderTemplate(wr, r, "credentials.html", userInfo)
