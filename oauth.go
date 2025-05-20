@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aohorodnyk/mimeheader"
 	"golang.org/x/oauth2"
 )
 
@@ -187,8 +188,23 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 		return
 	}
 
-	wr.Header().Set("Content-Type", "text/html")
-	RenderTemplate(wr, r, "credentials.html", userInfo)
+	accept := mimeheader.ParseAcceptHeader(r.Header.Get("Accept"))
+	_, mimeType, _ := accept.Negotiate([]string{"text/html", "application/json"}, "text/html")
+
+	switch mimeType {
+	case "application/json":
+		wr.Header().Set("Content-Type", "application/json")
+		marshaler := json.NewEncoder(wr)
+		err := marshaler.Encode(userInfo)
+		if err != nil {
+			http.Error(wr, "Failed to marshal userinfo", http.StatusInternalServerError)
+			log.Printf("Failed to marshal userinfo: %v", err)
+		}
+	case "text/html":
+	default:
+		wr.Header().Set("Content-Type", "text/html")
+		RenderTemplate(wr, r, "credentials.html", userInfo)
+	}
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
