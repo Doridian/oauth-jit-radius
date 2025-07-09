@@ -2,7 +2,7 @@ module github.com/Doridian/oauth-jit-radius
 
 go 1.23.0
 
-toolchain go1.24.4
+toolchain go1.24.5
 
 require (
 	github.com/aohorodnyk/mimeheader v0.0.6
