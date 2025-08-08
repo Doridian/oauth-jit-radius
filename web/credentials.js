@@ -6,7 +6,7 @@ async function waitFrame() {
 
 async function copyInt(element) {
     try {
-        const value = element.querySelector('.copyvalue').innerText;
+        const value = element.querySelector('.copyvalue').dataset.value;
         if (!value) {
             throw new Error('No value to copy');
         }

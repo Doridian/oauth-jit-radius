@@ -38,12 +38,12 @@ type oauthVerifier struct {
 type OAuthUserInfo struct {
 	Sub                   string   `json:"sub"`
 	Name                  string   `json:"name"`
-	Username              string   `json:"preferred_username"`
+	PreferredUsername     string   `json:"preferred_username"`
 	MikrotikGroup         []string `json:"mikrotik_group"`
 	APCServiceType        []string `json:"apc_service_type"`
 	CyberPowerServiceType []string `json:"cyberpower_service_type"`
 	SupermicroPermissions []string `json:"supermicro_permissions"`
-	Token                 string   `json:"token"`
+	Token                 string
 	Expiry                time.Time
 }
 
@@ -155,7 +155,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	userInfo := &OAuthUserInfo{}
 	jsonDecoder := json.NewDecoder(userInfoResp.Body)
 	err = jsonDecoder.Decode(userInfo)
-	if err == nil && userInfo.Username == "" {
+	if err == nil && userInfo.PreferredUsername == "" {
 		err = errors.New("missing username in userinfo")
 	}
 	if err != nil {
@@ -167,7 +167,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	oauthAuthMutex.Lock()
 	defer oauthAuthMutex.Unlock()
 
-	userInfoOld := getUserInfoForUserNoLock(userInfo.Username)
+	userInfoOld := getUserInfoForUserNoLock(userInfo.PreferredUsername)
 	if userInfoOld.Token == "" {
 		userInfo.Token = randomToken()
 	} else {
@@ -175,15 +175,15 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	}
 	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
 
-	oauthAuthorizations[userInfo.Username] = *userInfo
+	oauthAuthorizations[userInfo.PreferredUsername] = *userInfo
 	renderUserInfo(wr, r, userInfo)
 }
 
 func handleRenderTest(wr http.ResponseWriter, r *http.Request) {
 	dummyUserInfo := &OAuthUserInfo{
-		Username: "testuser",
-		Token:    "testtoken",
-		Expiry:   time.Now().Add(radiusTokenExpiry),
+		PreferredUsername: "testuser",
+		Token:             "testtoken",
+		Expiry:            time.Now().Add(radiusTokenExpiry),
 	}
 	renderUserInfo(wr, r, dummyUserInfo)
 }
@@ -202,7 +202,7 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 		wr.Header().Set("Content-Type", "application/json")
 		marshaler := json.NewEncoder(wr)
 		err := marshaler.Encode(&serializedUserInfo{
-			Username: userInfo.Username,
+			Username: userInfo.PreferredUsername,
 			Password: userInfo.Token,
 			Expiry:   userInfo.Expiry.Format(TimeMachineReadable),
 		})

@@ -124,7 +124,7 @@ func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInf
 
 	ok, err := matcher.CustomMapper(packet, userInfo)
 	if err != nil {
-		log.Printf("CustomMapper failed for %s: %v", userInfo.Username, err)
+		log.Printf("CustomMapper failed for %s: %v", userInfo.PreferredUsername, err)
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
@@ -143,7 +143,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 
 	userInfo := GetUserInfoForUser(username)
 
-	if userInfo.Username != username || userInfo.Token == "" {
+	if userInfo.PreferredUsername != username || userInfo.Token == "" {
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
