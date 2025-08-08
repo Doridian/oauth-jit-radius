@@ -17,12 +17,19 @@ func buildTemplates() *template.Template {
 }
 
 type tplData struct {
-	Data interface{}
-	Req  *http.Request
+	Data                interface{}
+	Req                 *http.Request
+	TimeHumanReadable   string
+	TimeMachineReadable string
 }
 
 func RenderTemplate(wr http.ResponseWriter, r *http.Request, name string, data interface{}) {
-	err := templates.ExecuteTemplate(wr, name, &tplData{Req: r, Data: data})
+	err := templates.ExecuteTemplate(wr, name, &tplData{
+		Req:                 r,
+		Data:                data,
+		TimeHumanReadable:   TimeHumanReadable,
+		TimeMachineReadable: TimeMachineReadable,
+	})
 	if err != nil {
 		http.Error(wr, "Error rendering template", http.StatusInternalServerError)
 		log.Printf("Error rendering template: %v", err)

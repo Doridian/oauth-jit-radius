@@ -36,15 +36,21 @@ type oauthVerifier struct {
 }
 
 type OAuthUserInfo struct {
-	Sub                   string    `json:"sub"`
-	Name                  string    `json:"name"`
-	Username              string    `json:"preferred_username"`
-	MikrotikGroup         []string  `json:"mikrotik_group"`
-	APCServiceType        []string  `json:"apc_service_type"`
-	CyberPowerServiceType []string  `json:"cyberpower_service_type"`
-	SupermicroPermissions []string  `json:"supermicro_permissions"`
-	Token                 string    `json:"token"`
-	Expiry                time.Time `json:"expiry"`
+	Sub                   string   `json:"sub"`
+	Name                  string   `json:"name"`
+	Username              string   `json:"preferred_username"`
+	MikrotikGroup         []string `json:"mikrotik_group"`
+	APCServiceType        []string `json:"apc_service_type"`
+	CyberPowerServiceType []string `json:"cyberpower_service_type"`
+	SupermicroPermissions []string `json:"supermicro_permissions"`
+	Token                 string   `json:"token"`
+	Expiry                time.Time
+}
+
+type serializedUserInfo struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Expiry   string `json:"expiry"`
 }
 
 func HasClaim(claims []string, claim string) bool {
@@ -195,7 +201,11 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 	case "application/json":
 		wr.Header().Set("Content-Type", "application/json")
 		marshaler := json.NewEncoder(wr)
-		err := marshaler.Encode(userInfo)
+		err := marshaler.Encode(&serializedUserInfo{
+			Username: userInfo.Username,
+			Password: userInfo.Token,
+			Expiry:   userInfo.Expiry.Format(TimeMachineReadable),
+		})
 		if err != nil {
 			http.Error(wr, "Failed to marshal userinfo", http.StatusInternalServerError)
 			log.Printf("Failed to marshal userinfo: %v", err)
