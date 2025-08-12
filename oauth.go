@@ -170,7 +170,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	defer oauthAuthMutex.Unlock()
 
 	userInfoOld := getUserInfoForUserNoLock(userInfo.PreferredUsername)
-	if userInfoOld.Token == "" {
+	if userInfoOld == nil || userInfoOld.Token == "" {
 		userInfo.Token = randomToken()
 	} else {
 		userInfo.Token = userInfoOld.Token
