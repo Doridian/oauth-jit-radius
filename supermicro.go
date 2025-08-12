@@ -5,7 +5,7 @@ import (
 	"layeh.com/radius/rfc2865"
 )
 
-func SupermicroMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+func SupermicroMapper(packet *radius.Packet, info *OAuthUserInfo) (bool, error) {
 	smicroPerms := ""
 	if HasClaim(info.SupermicroPermissions, "administrator") {
 		smicroPerms = "H=4, I=4"

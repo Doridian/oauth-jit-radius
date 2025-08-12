@@ -22,7 +22,7 @@ import (
 type RadiusMatcher struct {
 	Subnets      []net.IPNet
 	Secret       string
-	CustomMapper func(*radius.Packet, OAuthUserInfo) (bool, error)
+	CustomMapper func(*radius.Packet, *OAuthUserInfo) (bool, error)
 }
 
 type RadiusMatcherList struct {
@@ -115,7 +115,7 @@ func (m *RadiusMatcherList) RADIUSSecret(ctx context.Context, remoteAddr net.Add
 	return nil, nil
 }
 
-func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInfo OAuthUserInfo, packet *radius.Packet) {
+func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInfo *OAuthUserInfo, packet *radius.Packet) {
 	matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
 	if matcher == nil || matcher.CustomMapper == nil {
 		_ = w.Write(packet)
@@ -141,9 +141,9 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 	username := rfc2865.UserName_GetString(r.Packet)
 	password := rfc2865.UserPassword_GetString(r.Packet)
 
-	userInfo := GetUserInfoForUser(username)
+	userInfo := GetUserInfoForUser(username, r.RemoteAddr)
 
-	if userInfo.PreferredUsername != username || userInfo.Token == "" {
+	if userInfo == nil || userInfo.PreferredUsername != username || userInfo.Token == "" {
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}

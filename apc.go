@@ -7,7 +7,7 @@ import (
 	"layeh.com/radius"
 )
 
-func APCMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+func APCMapper(packet *radius.Packet, info *OAuthUserInfo) (bool, error) {
 	var apcServiceType vendor_radius.APCServiceType
 	if HasClaim(info.APCServiceType, "admin") {
 		apcServiceType = vendor_radius.APCServiceType_Value_Admin

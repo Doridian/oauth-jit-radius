@@ -5,7 +5,7 @@ import (
 	"layeh.com/radius"
 )
 
-func CyberPowerMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+func CyberPowerMapper(packet *radius.Packet, info *OAuthUserInfo) (bool, error) {
 	var cyberServiceType vendor_radius.CyberPowerServiceType
 	if HasClaim(info.CyberPowerServiceType, "admin") {
 		cyberServiceType = vendor_radius.CyberPowerServiceType_Value_Admin

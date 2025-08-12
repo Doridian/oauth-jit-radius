@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -22,10 +23,10 @@ var oauthUserInfoUrl string
 var radiusTokenExpiry time.Duration
 
 var oauthAuthMutex sync.RWMutex
-var oauthAuthorizations map[string]OAuthUserInfo
+var oauthAuthorizations map[string]*OAuthUserInfo
 
 var oauthVerifierLock sync.Mutex
-var oauthVerifierMap map[string]oauthVerifier
+var oauthVerifierMap map[string]*oauthVerifier
 
 var oauthTLSCertFilename string
 var oauthTLSLoadTime time.Time
@@ -80,8 +81,8 @@ func startOAuthServer() {
 		log.Fatalf("Failed to parse RADIUS_TOKEN_EXPIRY: %v", err)
 	}
 
-	oauthAuthorizations = make(map[string]OAuthUserInfo)
-	oauthVerifierMap = make(map[string]oauthVerifier)
+	oauthAuthorizations = make(map[string]*OAuthUserInfo)
+	oauthVerifierMap = make(map[string]*oauthVerifier)
 
 	oauthUserInfoUrl = os.Getenv("OAUTH_USERINFO_URL")
 
@@ -176,7 +177,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	}
 	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
 
-	oauthAuthorizations[userInfo.PreferredUsername] = *userInfo
+	oauthAuthorizations[userInfo.PreferredUsername] = userInfo
 	renderUserInfo(wr, r, userInfo)
 }
 
@@ -224,7 +225,7 @@ func handleLogin(wr http.ResponseWriter, r *http.Request) {
 
 	verifier := oauth2.GenerateVerifier()
 	oauthVerifierLock.Lock()
-	oauthVerifierMap[state] = oauthVerifier{
+	oauthVerifierMap[state] = &oauthVerifier{
 		Verifier: verifier,
 		expiry:   time.Now().Add(5 * time.Minute),
 	}
@@ -236,16 +237,25 @@ func handleLogin(wr http.ResponseWriter, r *http.Request) {
 	http.Redirect(wr, r, url, http.StatusFound)
 }
 
-func getUserInfoForUserNoLock(username string) OAuthUserInfo {
+func getUserInfoForUserNoLock(username string) *OAuthUserInfo {
 	authInfo, ok := oauthAuthorizations[username]
 	if !ok || authInfo.Expiry.Before(time.Now()) {
-		return OAuthUserInfo{}
+		return nil
 	}
 
 	return authInfo
 }
 
-func GetUserInfoForUser(username string) OAuthUserInfo {
+func getHardcodedUserInfo(username string, remoteAddr net.Addr) *OAuthUserInfo {
+	return nil
+}
+
+func GetUserInfoForUser(username string, remoteAddr net.Addr) *OAuthUserInfo {
+	userInfo := getHardcodedUserInfo(username, remoteAddr)
+	if userInfo != nil {
+		return userInfo
+	}
+
 	oauthAuthMutex.RLock()
 	defer oauthAuthMutex.RUnlock()
 

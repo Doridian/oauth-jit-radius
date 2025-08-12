@@ -5,7 +5,7 @@ import (
 	"layeh.com/radius"
 )
 
-func MikrotikMapper(packet *radius.Packet, info OAuthUserInfo) (bool, error) {
+func MikrotikMapper(packet *radius.Packet, info *OAuthUserInfo) (bool, error) {
 	if len(info.MikrotikGroup) < 1 {
 		return false, nil
 	}
