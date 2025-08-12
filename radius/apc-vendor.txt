@@ -5,9 +5,12 @@ VENDOR APC 318
 BEGIN-VENDOR APC
 
 ATTRIBUTE APC-Service-Type 1 integer
+ATTRIBUTE APC-Outlets 2 string
 
 VALUE APC-Service-Type Admin 1
 VALUE APC-Service-Type Device 2
 VALUE APC-Service-Type ReadOnly 3
+VALUE APC-Service-Type Outlet 4
+VALUE APC-Service-Type NetworkOnly 6
 
 END-VENDOR APC

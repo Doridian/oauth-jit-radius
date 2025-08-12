@@ -146,15 +146,19 @@ vsaLoop:
 type APCServiceType uint32
 
 const (
-	APCServiceType_Value_Admin    APCServiceType = 1
-	APCServiceType_Value_Device   APCServiceType = 2
-	APCServiceType_Value_ReadOnly APCServiceType = 3
+	APCServiceType_Value_Admin       APCServiceType = 1
+	APCServiceType_Value_Device      APCServiceType = 2
+	APCServiceType_Value_ReadOnly    APCServiceType = 3
+	APCServiceType_Value_Outlet      APCServiceType = 4
+	APCServiceType_Value_NetworkOnly APCServiceType = 6
 )
 
 var APCServiceType_Strings = map[APCServiceType]string{
-	APCServiceType_Value_Admin:    "Admin",
-	APCServiceType_Value_Device:   "Device",
-	APCServiceType_Value_ReadOnly: "ReadOnly",
+	APCServiceType_Value_Admin:       "Admin",
+	APCServiceType_Value_Device:      "Device",
+	APCServiceType_Value_ReadOnly:    "ReadOnly",
+	APCServiceType_Value_Outlet:      "Outlet",
+	APCServiceType_Value_NetworkOnly: "NetworkOnly",
 }
 
 func (a APCServiceType) String() string {
@@ -208,4 +212,98 @@ func APCServiceType_Set(p *radius.Packet, value APCServiceType) (err error) {
 
 func APCServiceType_Del(p *radius.Packet) {
 	_APC_DelVendor(p, 1)
+}
+
+func APCOutlets_Add(p *radius.Packet, value []byte) (err error) {
+	var a radius.Attribute
+	a, err = radius.NewBytes(value)
+	if err != nil {
+		return
+	}
+	return _APC_AddVendor(p, 2, a)
+}
+
+func APCOutlets_AddString(p *radius.Packet, value string) (err error) {
+	var a radius.Attribute
+	a, err = radius.NewString(value)
+	if err != nil {
+		return
+	}
+	return _APC_AddVendor(p, 2, a)
+}
+
+func APCOutlets_Get(p *radius.Packet) (value []byte) {
+	value, _ = APCOutlets_Lookup(p)
+	return
+}
+
+func APCOutlets_GetString(p *radius.Packet) (value string) {
+	value, _ = APCOutlets_LookupString(p)
+	return
+}
+
+func APCOutlets_Gets(p *radius.Packet) (values [][]byte, err error) {
+	var i []byte
+	for _, attr := range _APC_GetsVendor(p, 2) {
+		i = radius.Bytes(attr)
+		if err != nil {
+			return
+		}
+		values = append(values, i)
+	}
+	return
+}
+
+func APCOutlets_GetStrings(p *radius.Packet) (values []string, err error) {
+	var i string
+	for _, attr := range _APC_GetsVendor(p, 2) {
+		i = radius.String(attr)
+		if err != nil {
+			return
+		}
+		values = append(values, i)
+	}
+	return
+}
+
+func APCOutlets_Lookup(p *radius.Packet) (value []byte, err error) {
+	a, ok := _APC_LookupVendor(p, 2)
+	if !ok {
+		err = radius.ErrNoAttribute
+		return
+	}
+	value = radius.Bytes(a)
+	return
+}
+
+func APCOutlets_LookupString(p *radius.Packet) (value string, err error) {
+	a, ok := _APC_LookupVendor(p, 2)
+	if !ok {
+		err = radius.ErrNoAttribute
+		return
+	}
+	value = radius.String(a)
+	return
+}
+
+func APCOutlets_Set(p *radius.Packet, value []byte) (err error) {
+	var a radius.Attribute
+	a, err = radius.NewBytes(value)
+	if err != nil {
+		return
+	}
+	return _APC_SetVendor(p, 2, a)
+}
+
+func APCOutlets_SetString(p *radius.Packet, value string) (err error) {
+	var a radius.Attribute
+	a, err = radius.NewString(value)
+	if err != nil {
+		return
+	}
+	return _APC_SetVendor(p, 2, a)
+}
+
+func APCOutlets_Del(p *radius.Packet) {
+	_APC_DelVendor(p, 2)
 }
