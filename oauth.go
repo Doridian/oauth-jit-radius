@@ -170,7 +170,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	defer oauthAuthMutex.Unlock()
 
 	userInfoOld := getUserInfoForUserNoLock(userInfo.PreferredUsername)
-	if userInfoOld == nil || userInfoOld.Token == "" {
+	if userInfoOld == nil {
 		userInfo.Token = randomToken()
 	} else {
 		userInfo.Token = userInfoOld.Token
@@ -191,7 +191,7 @@ func handleRenderTest(wr http.ResponseWriter, r *http.Request) {
 }
 
 func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUserInfo) {
-	if userInfo == nil || userInfo.Token == "" {
+	if userInfo == nil {
 		http.Error(wr, "Not found", http.StatusNotFound)
 		return
 	}
