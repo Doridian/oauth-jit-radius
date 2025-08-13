@@ -194,7 +194,7 @@ func startRadiusServer() {
 	for _, matcherConfig := range GetConfig().Matchers {
 		matcher := &RadiusMatcher{
 			Subnets: []net.IPNet{},
-			Secret:  matcherConfig.Secret,
+			Secret:  string(matcherConfig.Secret),
 			Mapper:  getMapperByName(matcherConfig.Mapper),
 		}
 		for _, subnetStr := range matcherConfig.Subnets {

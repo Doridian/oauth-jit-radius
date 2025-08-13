@@ -2,33 +2,33 @@ matchers:
   - subnets:
     - 10.2.1.1/32
     - 10.2.1.2/32
-    secret: RADIUS_SECRET_MIKROTIK
+    secret: ${RADIUS_SECRET_MIKROTIK}
     mapper: mikrotik
   - subnets:
     - 10.1.12.1/32
-    secret: RADIUS_SECRET_SUPERMICRO
+    secret: ${RADIUS_SECRET_SUPERMICRO}
     mapper: supermicro
   - subnets:
     - 10.1.11.2/32
-    secret: RADIUS_SECRET_APCUPS
+    secret: ${RADIUS_SECRET_APCUPS}
     mapper: apc
   - subnets:
     - 10.1.11.3/32
-    secret: RADIUS_SECRET_CYBERPOWER
+    secret: ${RADIUS_SECRET_CYBERPOWER}
     mapper: cyberpower
 
 radius:
   token_expiry: 1h
 
 oauth:
-  user_info_url: https://example.com/oauth/userinfo
-  token_url: https://example.com/oauth/token
-  auth_url: https://example.com/oauth/auth
-  redirect_url: https://example.com/oauth/redirect
+  userinfo_url: ${OAUTH_USERINFO_URL}
+  token_url: ${OAUTH_TOKEN_URL}
+  auth_url: ${OAUTH_AUTH_URL}
+  redirect_url: ${OAUTH_REDIRECT_URL}
   scopes:
     - openid
     - profile
     - email
-  client_id: YOUR_CLIENT_ID
-  client_secret: YOUR_CLIENT_SECRET
-  server_addr: "127.0.0.1:8080"
+  client_id: ${OAUTH_CLIENT_ID}
+  client_secret: ${OAUTH_CLIENT_SECRET}
+  server_addr: ${OAUTH_SERVER_ADDR}

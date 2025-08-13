@@ -77,7 +77,7 @@ func startOAuthServer() {
 
 	cfg := GetConfig()
 
-	radiusTokenExpiry, err = time.ParseDuration(cfg.Radius.TokenExpiry)
+	radiusTokenExpiry, err = time.ParseDuration(string(cfg.Radius.TokenExpiry))
 	if err != nil {
 		log.Fatalf("Failed to parse RADIUS_TOKEN_EXPIRY: %v", err)
 	}
@@ -85,17 +85,17 @@ func startOAuthServer() {
 	oauthAuthorizations = make(map[string]*OAuthUserInfo)
 	oauthVerifierMap = make(map[string]*oauthVerifier)
 
-	oauthUserInfoUrl = cfg.OAuth.UserInfoURL
+	oauthUserInfoUrl = string(cfg.OAuth.UserInfoURL)
 
 	oauthConfig = &oauth2.Config{
-		ClientID:     cfg.OAuth.ClientID,
-		ClientSecret: cfg.OAuth.ClientSecret,
+		ClientID:     string(cfg.OAuth.ClientID),
+		ClientSecret: string(cfg.OAuth.ClientSecret),
 		Scopes:       cfg.OAuth.Scopes,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  cfg.OAuth.AuthURL,
-			TokenURL: cfg.OAuth.TokenURL,
+			AuthURL:  string(cfg.OAuth.AuthURL),
+			TokenURL: string(cfg.OAuth.TokenURL),
 		},
-		RedirectURL: cfg.OAuth.RedirectURL,
+		RedirectURL: string(cfg.OAuth.RedirectURL),
 	}
 
 	go loopOauthMaintenance()
@@ -114,10 +114,10 @@ func startOAuthServer() {
 	tlsKey := cfg.OAuth.TLS.KeyFile
 	if oauthTLSCertFilename != "" && tlsKey != "" {
 		oauthTLSLoadTime = time.Now()
-		err = http.ListenAndServeTLS(cfg.OAuth.ServerAddr, oauthTLSCertFilename, tlsKey, nil)
+		err = http.ListenAndServeTLS(string(cfg.OAuth.ServerAddr), oauthTLSCertFilename, tlsKey, nil)
 	} else {
 		oauthTLSCertFilename = ""
-		err = http.ListenAndServe(cfg.OAuth.ServerAddr, nil)
+		err = http.ListenAndServe(string(cfg.OAuth.ServerAddr), nil)
 	}
 	if err != nil {
 		log.Fatal(err)
