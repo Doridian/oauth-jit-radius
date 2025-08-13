@@ -16,7 +16,7 @@ type Config struct {
 	} `yaml:"matchers"`
 
 	Radius struct {
-		TokenExpiry StringWithEnv `yaml:"token_expiry"` // Duration string, e.g., "1h", "30m"
+		PasswordExpiry StringWithEnv `yaml:"password_expiry"` // Duration string, e.g., "1h", "30m"
 	} `yaml:"radius"`
 
 	StaticUsers []*OAuthUserInfo `yaml:"static_users"`

@@ -19,7 +19,7 @@ import (
 
 var oauthConfig *oauth2.Config
 var oauthUserInfoUrl string
-var radiusTokenExpiry time.Duration
+var radiusPasswordExpiry time.Duration
 
 var oauthAuthMutex sync.RWMutex
 var oauthAuthorizations map[string]*OAuthUserInfo
@@ -42,7 +42,7 @@ type OAuthUserInfo struct {
 	APCOutlets            []string      `json,yaml:"apc_outlets"`
 	CyberPowerServiceType []string      `json,yaml:"cyberpower_service_type"`
 	SupermicroPermissions []string      `json,yaml:"supermicro_permissions"`
-	Token                 StringWithEnv `yaml:"password"`
+	Password              StringWithEnv `yaml:"password"`
 	AllowedIPs            []net.IP      `yaml:"allowed_ips"`
 	Expiry                time.Time
 }
@@ -62,11 +62,11 @@ func HasClaim(claims []string, claim string) bool {
 	return false
 }
 
-func randomToken() string {
+func randomPassword() string {
 	buff := make([]byte, 12) // 16 after b64
 	_, err := rand.Read(buff)
 	if err != nil {
-		log.Fatalf("Failed to generate random token: %v", err)
+		log.Fatalf("Failed to generate random password: %v", err)
 	}
 	return base64.RawURLEncoding.EncodeToString(buff)
 }
@@ -76,9 +76,9 @@ func startOAuthServer() {
 
 	cfg := GetConfig()
 
-	radiusTokenExpiry, err = time.ParseDuration(string(cfg.Radius.TokenExpiry))
+	radiusPasswordExpiry, err = time.ParseDuration(string(cfg.Radius.PasswordExpiry))
 	if err != nil {
-		log.Fatalf("Failed to parse RADIUS token_expiry: %v", err)
+		log.Fatalf("Failed to parse RADIUS password_expiry: %v", err)
 	}
 
 	oauthAuthorizations = make(map[string]*OAuthUserInfo)
@@ -131,7 +131,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	delete(oauthVerifierMap, state)
 	oauthVerifierLock.Unlock()
 
-	if verifierEntry.Verifier == "" || verifierEntry.expiry.Before(time.Now()) {
+	if verifierEntry == nil || verifierEntry.expiry.Before(time.Now()) {
 		handleLogin(wr, r)
 		return
 	}
@@ -170,11 +170,11 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 
 	userInfoOld := getUserInfoForUserNoLock(userInfo.Username)
 	if userInfoOld == nil {
-		userInfo.Token = StringWithEnv(randomToken())
+		userInfo.Password = StringWithEnv(randomPassword())
 	} else {
-		userInfo.Token = userInfoOld.Token
+		userInfo.Password = userInfoOld.Password
 	}
-	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
+	userInfo.Expiry = time.Now().Add(radiusPasswordExpiry)
 
 	oauthAuthorizations[userInfo.Username] = userInfo
 	renderUserInfo(wr, r, userInfo)
@@ -183,8 +183,8 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 func handleRenderTest(wr http.ResponseWriter, r *http.Request) {
 	dummyUserInfo := &OAuthUserInfo{
 		Username: "testuser",
-		Token:    "testtoken",
-		Expiry:   time.Now().Add(radiusTokenExpiry),
+		Password: "testtoken",
+		Expiry:   time.Now().Add(radiusPasswordExpiry),
 	}
 	renderUserInfo(wr, r, dummyUserInfo)
 }
@@ -204,7 +204,7 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 		marshaler := json.NewEncoder(wr)
 		err := marshaler.Encode(&serializedUserInfo{
 			Username: userInfo.Username,
-			Password: string(userInfo.Token),
+			Password: string(userInfo.Password),
 			Expiry:   userInfo.Expiry.Format(TimeMachineReadable),
 		})
 		if err != nil {
@@ -220,7 +220,7 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 }
 
 func handleLogin(wr http.ResponseWriter, r *http.Request) {
-	state := randomToken()
+	state := randomPassword()
 
 	verifier := oauth2.GenerateVerifier()
 	oauthVerifierLock.Lock()

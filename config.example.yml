@@ -18,7 +18,7 @@ matchers:
     mapper: cyberpower
 
 radius:
-  token_expiry: 1h
+  password_expiry: 1h
 
 oauth:
   userinfo_url: ${OAUTH_USERINFO_URL}
