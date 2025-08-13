@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -17,6 +18,8 @@ type Config struct {
 	Radius struct {
 		TokenExpiry StringWithEnv `yaml:"token_expiry"` // Duration string, e.g., "1h", "30m"
 	} `yaml:"radius"`
+
+	StaticUsers []*OAuthUserInfo `yaml:"static_users"`
 
 	OAuth struct {
 		UserInfoURL StringWithEnv `yaml:"userinfo_url"`
@@ -36,7 +39,10 @@ type Config struct {
 	}
 }
 
-var globalConfig *Config
+var (
+	globalConfig *Config
+	staticUsers  map[string]*OAuthUserInfo
+)
 
 func init() {
 	fh, err := os.Open("config.yml")
@@ -48,11 +54,17 @@ func init() {
 	}()
 
 	decoder := yaml.NewDecoder(fh)
+	decoder.KnownFields(true)
 
 	globalConfig = &Config{}
 	err = decoder.Decode(globalConfig)
 	if err != nil {
 		log.Fatalf("Failed to decode config: %v", err)
+	}
+
+	staticUsers = make(map[string]*OAuthUserInfo)
+	for _, user := range globalConfig.StaticUsers {
+		staticUsers[user.Username] = user
 	}
 }
 
@@ -69,4 +81,33 @@ func (e *StringWithEnv) UnmarshalYAML(value *yaml.Node) error {
 
 func GetConfig() *Config {
 	return globalConfig
+}
+
+func extractIP(addr net.Addr) net.IP {
+	switch convAddr := addr.(type) {
+	case *net.TCPAddr:
+		return convAddr.IP
+	case *net.UDPAddr:
+		return convAddr.IP
+	case *net.IPAddr:
+		return convAddr.IP
+	default:
+		return net.IPv4(0, 0, 0, 0)
+	}
+}
+
+func GetStaticUserInfo(username string, remoteAddr net.Addr) *OAuthUserInfo {
+	userInfo := staticUsers[username]
+	for userInfo == nil {
+		return nil
+	}
+
+	remoteIP := extractIP(remoteAddr)
+
+	for _, ip := range userInfo.AllowedIPs {
+		if ip.Equal(remoteIP) {
+			return userInfo
+		}
+	}
+	return nil
 }

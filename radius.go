@@ -75,7 +75,7 @@ func (m *RadiusMatcherList) radiusMatchAndSendReply(w radius.ResponseWriter, r *
 
 	ok, err := matcher.Mapper(packet, userInfo)
 	if err != nil {
-		log.Printf("CustomMapper failed for %s: %v", userInfo.PreferredUsername, err)
+		log.Printf("CustomMapper failed for %s: %v", userInfo.Username, err)
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
@@ -94,12 +94,12 @@ func (m *RadiusMatcherList) ServeRADIUS(w radius.ResponseWriter, r *radius.Reque
 
 	userInfo := GetUserInfoForUser(username, r.RemoteAddr)
 
-	if userInfo == nil || userInfo.PreferredUsername != username || userInfo.Token == "" {
+	if userInfo == nil || userInfo.Username != username || userInfo.Token == "" {
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
 
-	if password == userInfo.Token {
+	if password == string(userInfo.Token) {
 		responsePacket := r.Response(radius.CodeAccessAccept)
 		m.radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return

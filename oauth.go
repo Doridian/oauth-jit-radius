@@ -36,15 +36,14 @@ type oauthVerifier struct {
 }
 
 type OAuthUserInfo struct {
-	Sub                   string   `json:"sub"`
-	Name                  string   `json:"name"`
-	PreferredUsername     string   `json:"preferred_username"`
-	MikrotikGroup         []string `json:"mikrotik_group"`
-	APCServiceType        []string `json:"apc_service_type"`
-	APCOutlets            []string `json:"apc_outlets"`
-	CyberPowerServiceType []string `json:"cyberpower_service_type"`
-	SupermicroPermissions []string `json:"supermicro_permissions"`
-	Token                 string
+	Username              string        `json:"preferred_username" yaml:"username"`
+	MikrotikGroup         []string      `json,yaml:"mikrotik_group"`
+	APCServiceType        []string      `json,yaml:"apc_service_type"`
+	APCOutlets            []string      `json,yaml:"apc_outlets"`
+	CyberPowerServiceType []string      `json,yaml:"cyberpower_service_type"`
+	SupermicroPermissions []string      `json,yaml:"supermicro_permissions"`
+	Token                 StringWithEnv `yaml:"password"`
+	AllowedIPs            []net.IP      `yaml:"allowed_ips"`
 	Expiry                time.Time
 }
 
@@ -79,7 +78,7 @@ func startOAuthServer() {
 
 	radiusTokenExpiry, err = time.ParseDuration(string(cfg.Radius.TokenExpiry))
 	if err != nil {
-		log.Fatalf("Failed to parse RADIUS_TOKEN_EXPIRY: %v", err)
+		log.Fatalf("Failed to parse RADIUS token_expiry: %v", err)
 	}
 
 	oauthAuthorizations = make(map[string]*OAuthUserInfo)
@@ -157,7 +156,7 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	userInfo := &OAuthUserInfo{}
 	jsonDecoder := json.NewDecoder(userInfoResp.Body)
 	err = jsonDecoder.Decode(userInfo)
-	if err == nil && userInfo.PreferredUsername == "" {
+	if err == nil && userInfo.Username == "" {
 		err = errors.New("missing username in userinfo")
 	}
 	if err != nil {
@@ -169,23 +168,23 @@ func handleRedirect(wr http.ResponseWriter, r *http.Request) {
 	oauthAuthMutex.Lock()
 	defer oauthAuthMutex.Unlock()
 
-	userInfoOld := getUserInfoForUserNoLock(userInfo.PreferredUsername)
+	userInfoOld := getUserInfoForUserNoLock(userInfo.Username)
 	if userInfoOld == nil {
-		userInfo.Token = randomToken()
+		userInfo.Token = StringWithEnv(randomToken())
 	} else {
 		userInfo.Token = userInfoOld.Token
 	}
 	userInfo.Expiry = time.Now().Add(radiusTokenExpiry)
 
-	oauthAuthorizations[userInfo.PreferredUsername] = userInfo
+	oauthAuthorizations[userInfo.Username] = userInfo
 	renderUserInfo(wr, r, userInfo)
 }
 
 func handleRenderTest(wr http.ResponseWriter, r *http.Request) {
 	dummyUserInfo := &OAuthUserInfo{
-		PreferredUsername: "testuser",
-		Token:             "testtoken",
-		Expiry:            time.Now().Add(radiusTokenExpiry),
+		Username: "testuser",
+		Token:    "testtoken",
+		Expiry:   time.Now().Add(radiusTokenExpiry),
 	}
 	renderUserInfo(wr, r, dummyUserInfo)
 }
@@ -204,8 +203,8 @@ func renderUserInfo(wr http.ResponseWriter, r *http.Request, userInfo *OAuthUser
 		wr.Header().Set("Content-Type", "application/json")
 		marshaler := json.NewEncoder(wr)
 		err := marshaler.Encode(&serializedUserInfo{
-			Username: userInfo.PreferredUsername,
-			Password: userInfo.Token,
+			Username: userInfo.Username,
+			Password: string(userInfo.Token),
 			Expiry:   userInfo.Expiry.Format(TimeMachineReadable),
 		})
 		if err != nil {
@@ -246,12 +245,8 @@ func getUserInfoForUserNoLock(username string) *OAuthUserInfo {
 	return authInfo
 }
 
-func getHardcodedUserInfo(username string, remoteAddr net.Addr) *OAuthUserInfo {
-	return nil
-}
-
 func GetUserInfoForUser(username string, remoteAddr net.Addr) *OAuthUserInfo {
-	userInfo := getHardcodedUserInfo(username, remoteAddr)
+	userInfo := GetStaticUserInfo(username, remoteAddr)
 	if userInfo != nil {
 		return userInfo
 	}
