@@ -1,3 +1,4 @@
 /oauth-jit-radius
 *.exe
 /run.sh
+/config.yml

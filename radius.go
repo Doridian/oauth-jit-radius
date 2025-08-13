@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 	"net"
-	"os"
 	"reflect"
+	"strings"
 	"sync"
 
 	"layeh.com/radius"
@@ -19,67 +19,18 @@ import (
 
 // Thanks to: https://github.com/holoplot/radioauth/blob/7caeddc60e4c597f812b86f446626f6836728581/cmd/radioauth/radius-server.go#L36
 
+type RadiusMapper func(*radius.Packet, *OAuthUserInfo) (bool, error)
+
 type RadiusMatcher struct {
-	Subnets      []net.IPNet
-	Secret       string
-	CustomMapper func(*radius.Packet, *OAuthUserInfo) (bool, error)
+	Subnets []net.IPNet
+	Secret  string
+	Mapper  RadiusMapper
 }
 
 type RadiusMatcherList struct {
 	matchers  []*RadiusMatcher
 	cache     map[string]*RadiusMatcher
 	cacheLock sync.RWMutex
-}
-
-// TODO: All of this should be configurable
-var radiusMatchers = RadiusMatcherList{
-	matchers: []*RadiusMatcher{
-		{
-			Subnets: []net.IPNet{
-				{
-					IP:   net.IP{10, 2, 1, 1},
-					Mask: net.IPMask{255, 255, 255, 255},
-				},
-				{
-					IP:   net.IP{10, 2, 1, 2},
-					Mask: net.IPMask{255, 255, 255, 255},
-				},
-			},
-			Secret:       os.Getenv("RADIUS_SECRET_MIKROTIK"),
-			CustomMapper: MikrotikMapper,
-		},
-		{
-			Subnets: []net.IPNet{
-				{
-					IP:   net.IP{10, 1, 12, 1},
-					Mask: net.IPMask{255, 255, 255, 255},
-				},
-			},
-			Secret:       os.Getenv("RADIUS_SECRET_SUPERMICRO"),
-			CustomMapper: SupermicroMapper,
-		},
-		{
-			Subnets: []net.IPNet{
-				{
-					IP:   net.IP{10, 1, 11, 2},
-					Mask: net.IPMask{255, 255, 255, 255},
-				},
-			},
-			Secret:       os.Getenv("RADIUS_SECRET_APCUPS"),
-			CustomMapper: APCMapper,
-		},
-		{
-			Subnets: []net.IPNet{
-				{
-					IP:   net.IP{10, 1, 11, 3},
-					Mask: net.IPMask{255, 255, 255, 255},
-				},
-			},
-			Secret:       os.Getenv("RADIUS_SECRET_CYBERPOWER"),
-			CustomMapper: CyberPowerMapper,
-		},
-	},
-	cache: make(map[string]*RadiusMatcher),
 }
 
 func (m *RadiusMatcherList) GetRadiusMatcherFor(remoteAddr net.Addr) *RadiusMatcher {
@@ -115,14 +66,14 @@ func (m *RadiusMatcherList) RADIUSSecret(ctx context.Context, remoteAddr net.Add
 	return nil, nil
 }
 
-func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInfo *OAuthUserInfo, packet *radius.Packet) {
-	matcher := radiusMatchers.GetRadiusMatcherFor(r.RemoteAddr)
-	if matcher == nil || matcher.CustomMapper == nil {
+func (m *RadiusMatcherList) radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInfo *OAuthUserInfo, packet *radius.Packet) {
+	matcher := m.GetRadiusMatcherFor(r.RemoteAddr)
+	if matcher == nil || matcher.Mapper == nil {
 		_ = w.Write(packet)
 		return
 	}
 
-	ok, err := matcher.CustomMapper(packet, userInfo)
+	ok, err := matcher.Mapper(packet, userInfo)
 	if err != nil {
 		log.Printf("CustomMapper failed for %s: %v", userInfo.PreferredUsername, err)
 		_ = w.Write(r.Response(radius.CodeAccessReject))
@@ -137,7 +88,7 @@ func radiusMatchAndSendReply(w radius.ResponseWriter, r *radius.Request, userInf
 	_ = w.Write(packet)
 }
 
-func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
+func (m *RadiusMatcherList) ServeRADIUS(w radius.ResponseWriter, r *radius.Request) {
 	username := rfc2865.UserName_GetString(r.Packet)
 	password := rfc2865.UserPassword_GetString(r.Packet)
 
@@ -150,7 +101,7 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 
 	if password == userInfo.Token {
 		responsePacket := r.Response(radius.CodeAccessAccept)
-		radiusMatchAndSendReply(w, r, userInfo, responsePacket)
+		m.radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return
 	}
 
@@ -210,17 +161,55 @@ func radiusHandler(w radius.ResponseWriter, r *radius.Request) {
 		_ = microsoft.MSMPPEEncryptionPolicy_Add(responsePacket, microsoft.MSMPPEEncryptionPolicy_Value_EncryptionAllowed)
 		_ = microsoft.MSMPPEEncryptionTypes_Add(responsePacket, microsoft.MSMPPEEncryptionTypes_Value_RC440or128BitAllowed)
 
-		radiusMatchAndSendReply(w, r, userInfo, responsePacket)
+		m.radiusMatchAndSendReply(w, r, userInfo, responsePacket)
 		return
 	}
 
 	_ = w.Write(r.Response(radius.CodeAccessReject))
 }
 
+func getMapperByName(name string) RadiusMapper {
+	switch strings.ToLower(strings.Trim(name, " ")) {
+	case "":
+		return nil
+	case "mikrotik":
+		return MikrotikMapper
+	case "supermicro":
+		return SupermicroMapper
+	case "apc":
+		return APCMapper
+	case "cyberpower":
+		return CyberPowerMapper
+	}
+	log.Fatalf("Unknown mapper: %s", name)
+	return nil
+}
+
 func startRadiusServer() {
+	matcherList := &RadiusMatcherList{
+		matchers: []*RadiusMatcher{},
+		cache:    make(map[string]*RadiusMatcher),
+	}
+
+	for _, matcherConfig := range GetConfig().Matchers {
+		matcher := &RadiusMatcher{
+			Subnets: []net.IPNet{},
+			Secret:  matcherConfig.Secret,
+			Mapper:  getMapperByName(matcherConfig.Mapper),
+		}
+		for _, subnetStr := range matcherConfig.Subnets {
+			_, subnet, err := net.ParseCIDR(subnetStr)
+			if err != nil {
+				log.Fatalf("Invalid subnet CIDR %q: %v", subnetStr, err)
+			}
+			matcher.Subnets = append(matcher.Subnets, *subnet)
+		}
+		matcherList.matchers = append(matcherList.matchers, matcher)
+	}
+
 	server := radius.PacketServer{
-		Handler:      radius.HandlerFunc(radiusHandler),
-		SecretSource: &radiusMatchers,
+		Handler:      matcherList,
+		SecretSource: matcherList,
 	}
 
 	log.Printf("Starting server on :1812")

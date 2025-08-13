@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -76,7 +75,9 @@ func randomToken() string {
 func startOAuthServer() {
 	var err error
 
-	radiusTokenExpiry, err = time.ParseDuration(os.Getenv("RADIUS_TOKEN_EXPIRY"))
+	cfg := GetConfig()
+
+	radiusTokenExpiry, err = time.ParseDuration(cfg.Radius.TokenExpiry)
 	if err != nil {
 		log.Fatalf("Failed to parse RADIUS_TOKEN_EXPIRY: %v", err)
 	}
@@ -84,17 +85,17 @@ func startOAuthServer() {
 	oauthAuthorizations = make(map[string]*OAuthUserInfo)
 	oauthVerifierMap = make(map[string]*oauthVerifier)
 
-	oauthUserInfoUrl = os.Getenv("OAUTH_USERINFO_URL")
+	oauthUserInfoUrl = cfg.OAuth.UserInfoURL
 
 	oauthConfig = &oauth2.Config{
-		ClientID:     os.Getenv("OAUTH_CLIENT_ID"),
-		ClientSecret: os.Getenv("OAUTH_CLIENT_SECRET"),
-		Scopes:       strings.Split(os.Getenv("OAUTH_SCOPES"), " "),
+		ClientID:     cfg.OAuth.ClientID,
+		ClientSecret: cfg.OAuth.ClientSecret,
+		Scopes:       cfg.OAuth.Scopes,
 		Endpoint: oauth2.Endpoint{
-			AuthURL:  os.Getenv("OAUTH_AUTH_URL"),
-			TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
+			AuthURL:  cfg.OAuth.AuthURL,
+			TokenURL: cfg.OAuth.TokenURL,
 		},
-		RedirectURL: os.Getenv("OAUTH_REDIRECT_URL"),
+		RedirectURL: cfg.OAuth.RedirectURL,
 	}
 
 	go loopOauthMaintenance()
@@ -106,17 +107,17 @@ func startOAuthServer() {
 	http.HandleFunc("/redirect", handleRedirect)
 	http.HandleFunc("/rendertest", handleRenderTest)
 	http.Handle("/", http.FileServer(http.Dir("web")))
-	log.Printf("Starting OAuth server on %s", os.Getenv("OAUTH_SERVER_ADDR"))
-	log.Printf("Visit: %s", os.Getenv("OAUTH_LOGIN_URL"))
+	log.Printf("Starting OAuth server on %s", cfg.OAuth.ServerAddr)
+	log.Printf("Visit: %s", cfg.OAuth.RedirectURL)
 
-	oauthTLSCertFilename = os.Getenv("TLS_CERT")
-	tlsKey := os.Getenv("TLS_KEY")
+	oauthTLSCertFilename = cfg.OAuth.TLS.CertFile
+	tlsKey := cfg.OAuth.TLS.KeyFile
 	if oauthTLSCertFilename != "" && tlsKey != "" {
 		oauthTLSLoadTime = time.Now()
-		err = http.ListenAndServeTLS(os.Getenv("OAUTH_SERVER_ADDR"), oauthTLSCertFilename, tlsKey, nil)
+		err = http.ListenAndServeTLS(cfg.OAuth.ServerAddr, oauthTLSCertFilename, tlsKey, nil)
 	} else {
 		oauthTLSCertFilename = ""
-		err = http.ListenAndServe(os.Getenv("OAUTH_SERVER_ADDR"), nil)
+		err = http.ListenAndServe(cfg.OAuth.ServerAddr, nil)
 	}
 	if err != nil {
 		log.Fatal(err)
