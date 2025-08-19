@@ -63,6 +63,7 @@ func (m *RadiusMatcherList) RADIUSSecret(ctx context.Context, remoteAddr net.Add
 	if matcher != nil {
 		return []byte(matcher.Secret), nil
 	}
+	log.Printf("Got unmatched RADIUS request from %v", remoteAddr)
 	return nil, nil
 }
 
@@ -95,6 +96,7 @@ func (m *RadiusMatcherList) ServeRADIUS(w radius.ResponseWriter, r *radius.Reque
 	userInfo := GetUserInfoForUser(username, r.RemoteAddr)
 
 	if userInfo == nil || userInfo.Username != username || userInfo.Password == "" {
+		log.Printf("Unknown user %s in RADIUS request from %s", username, r.RemoteAddr)
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
@@ -121,6 +123,7 @@ func (m *RadiusMatcherList) ServeRADIUS(w radius.ResponseWriter, r *radius.Reque
 		}
 
 		if !reflect.DeepEqual(ntResponse, peerResponse) {
+			log.Printf("NT response mismatch for %s: expected %x, got %x", username, ntResponse, peerResponse)
 			_ = w.Write(r.Response(radius.CodeAccessReject))
 			return
 		}
@@ -165,6 +168,7 @@ func (m *RadiusMatcherList) ServeRADIUS(w radius.ResponseWriter, r *radius.Reque
 		return
 	}
 
+	log.Printf("Invalid RADIUS auth request for user %s from %v", username, r.RemoteAddr)
 	_ = w.Write(r.Response(radius.CodeAccessReject))
 }
 
