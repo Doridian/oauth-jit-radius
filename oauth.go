@@ -37,11 +37,11 @@ type oauthVerifier struct {
 
 type OAuthUserInfo struct {
 	Username              string        `json:"preferred_username" yaml:"username"`
-	MikrotikGroup         []string      `json,yaml:"mikrotik_group"`
-	APCServiceType        []string      `json,yaml:"apc_service_type"`
-	APCOutlets            []string      `json,yaml:"apc_outlets"`
-	CyberPowerServiceType []string      `json,yaml:"cyberpower_service_type"`
-	SupermicroPermissions []string      `json,yaml:"supermicro_permissions"`
+	MikrotikGroup         []string      `json:"mikrotik_group" yaml:"mikrotik_group"`
+	APCServiceType        []string      `json:"apc_service_type" yaml:"apc_service_type"`
+	APCOutlets            []string      `json:"apc_outlets" yaml:"apc_outlets"`
+	CyberPowerServiceType []string      `json:"cyberpower_service_type" yaml:"cyberpower_service_type"`
+	SupermicroPermissions []string      `json:"supermicro_permissions" yaml:"supermicro_permissions"`
 	Password              StringWithEnv `yaml:"password"`
 	AllowedIPs            []net.IP      `yaml:"allowed_ips"`
 	Expiry                time.Time
