@@ -82,6 +82,7 @@ func (m *RadiusMatcherList) radiusMatchAndSendReply(w radius.ResponseWriter, r *
 	}
 
 	if !ok {
+		log.Printf("CustomMapper returned false for %s", userInfo.Username)
 		_ = w.Write(r.Response(radius.CodeAccessReject))
 		return
 	}
