@@ -2,3 +2,5 @@
 *.exe
 /run.sh
 /config.yml
+/result
+

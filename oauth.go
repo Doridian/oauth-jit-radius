@@ -105,7 +105,7 @@ func startOAuthServer() {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/redirect", handleRedirect)
 	http.HandleFunc("/rendertest", handleRenderTest)
-	http.Handle("/", http.FileServer(http.Dir("web")))
+	http.Handle("/", http.FileServerFS(webHttpFs))
 	log.Printf("Starting OAuth server on %s", cfg.OAuth.ServerAddr)
 
 	oauthTLSCertFilename = cfg.OAuth.TLS.CertFile
