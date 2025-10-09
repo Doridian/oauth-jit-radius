@@ -11,7 +11,7 @@
           pname = "oauth-jit-radius";
           version = "1.0.0";
           src = ./.;
-          vendorHash = "sha256-jBfXmhy3JJ6lhUMD8JiZWAbillVhB5JdA7nc1lEZE7I=";
+          vendorHash = "sha256-S0LHAzQ6MjZrTWDDlazuekcyjATaPmZCwgNOpKOAeTc=";
           buildInputs = [];
         };
       in
