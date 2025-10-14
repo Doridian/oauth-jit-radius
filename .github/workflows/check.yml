@@ -1,8 +1,9 @@
 name: Test and lint
+
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
-  workflow_call: {}
+  push:
+
 jobs:
   test:
     name: Test and lint
